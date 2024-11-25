@@ -1,7 +1,3 @@
-# Auteur : Dylan
-# Date : #enter
-# Nom du projet : #enter
-
 import pygame
 
 # ------------ INITIALISATION ET PARAMÈTRES ------------
@@ -27,7 +23,7 @@ WINDOW_HEIGHT = NUM_ROWS * CELL_SIZE + BORDER_WIDTH * 2
 
 # Création de la fenêtre d'affichage
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Jeu de Dames - Dame avec Mouvement Libre")
+pygame.display.set_caption("Jeu de Dames - Captures Valides")
 
 # Initialisation des pions
 pions_rouges = [[row, col, False] for row in range(4) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]  # False = pas reine
@@ -90,36 +86,47 @@ def est_case_noire(case):
     row, col = case
     return (row + col) % 2 == 0
 
-def verifier_case_libre(case):
+def verifier_capture(pion, case_cible, pions_ennemis):
     """
-    Vérifie si une case est libre (aucun pion rouge ou bleu).
-    """
-    row, col = case
-    return not any(p[0] == row and p[1] == col for p in (pions_rouges + pions_bleus))
-
-def mouvement_dame_valide(pion, case_cible):
-    """
-    Vérifie si un mouvement pour une dame est valide :
-    - La case cible est sur la même diagonale.
-    - Toutes les cases entre le point de départ et la case cible sont libres.
+    Vérifie si une capture est possible :
+    - Pion saute par-dessus un ennemi.
+    - Une case vide se trouve après l'ennemi.
     """
     row, col, _ = pion
     target_row, target_col = case_cible
 
-    # Vérifie que le mouvement est diagonal
-    if abs(target_row - row) != abs(target_col - col):
-        return False
+    # Vérifie si la case cible est à deux cases en diagonale
+    if abs(target_row - row) == 2 and abs(target_col - col) == 2:
+        middle_row = (row + target_row) // 2
+        middle_col = (col + target_col) // 2
 
-    # Vérifie que toutes les cases entre la position actuelle et la cible sont libres
-    step_row = 1 if target_row > row else -1
-    step_col = 1 if target_col > col else -1
-    for i in range(1, abs(target_row - row)):
-        intermediate_row = row + i * step_row
-        intermediate_col = col + i * step_col
-        if not verifier_case_libre([intermediate_row, intermediate_col]):
-            return False
+        # Vérifie si un pion ennemi est à capturer et la case cible est vide
+        if any(p[0] == middle_row and p[1] == middle_col for p in pions_ennemis) and \
+                not any(p[0] == target_row and p[1] == target_col for p in (pions_rouges + pions_bleus)):
+            return True
 
-    return True
+    return False
+
+def effectuer_capture(pion, case_cible, pions_ennemis):
+    """
+    Effectue la capture :
+    - Déplace le pion sur la case cible.
+    - Supprime le pion ennemi capturé.
+    """
+    row, col, _ = pion
+    target_row, target_col = case_cible
+    middle_row = (row + target_row) // 2
+    middle_col = (col + target_col) // 2
+
+    # Supprime le pion ennemi capturé
+    for p in pions_ennemis:
+        if p[0] == middle_row and p[1] == middle_col:
+            pions_ennemis.remove(p)
+            break
+
+    # Met à jour la position du pion
+    pion[0] = target_row
+    pion[1] = target_col
 
 def promotion_en_reine(pion, couleur):
     """
@@ -153,14 +160,13 @@ while running:
                 else:
                     # Si un pion est déjà sélectionné, détecte la case cible
                     case_cible = detecter_case(event.pos)
-                    if case_cible and est_case_noire(case_cible) and verifier_case_libre(case_cible):
+                    if case_cible and est_case_noire(case_cible):
                         pions, index = selected_pion
                         pion = pions[index]
 
-                        # Vérifie mouvement normal ou mouvement dame
-                        if pion[2]:  # Si c'est une dame
-                            if mouvement_dame_valide(pion, case_cible):
-                                pion[0], pion[1] = case_cible[0], case_cible[1]
+                        # Vérifie capture ou mouvement
+                        if verifier_capture(pion, case_cible, pions_bleus if pions == pions_rouges else pions_rouges):
+                            effectuer_capture(pion, case_cible, pions_bleus if pions == pions_rouges else pions_rouges)
                         elif abs(case_cible[0] - pion[0]) == 1 and abs(case_cible[1] - pion[1]) == 1:
                             # Mouvement normal
                             pion[0], pion[1] = case_cible[0], case_cible[1]
