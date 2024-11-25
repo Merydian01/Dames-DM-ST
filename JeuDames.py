@@ -5,7 +5,7 @@
 import pygame
 
 # ------------ INITIALISATION ET PARAMÈTRES ------------
-
+print("Coucou")
 # Initialisation de Pygame
 pygame.init()
 
@@ -18,10 +18,10 @@ BG_COLOR = (200, 200, 200)
 QUEEN_COLOR = (255, 215, 0)  # Or pour les reines
 
 # Paramètres du plateau et de la fenêtre
-CELL_SIZE = 80          # Taille d'une case
-LINE_LENGTH = 10        # Nombre de cases par ligne
-NUM_ROWS = 10           # Nombre de lignes
-BORDER_WIDTH = 20       # Largeur de la bordure autour du plateau
+CELL_SIZE = 80  # Taille d'une case
+LINE_LENGTH = 10  # Nombre de cases par ligne
+NUM_ROWS = 10  # Nombre de lignes
+BORDER_WIDTH = 20  # Largeur de la bordure autour du plateau
 WINDOW_WIDTH = LINE_LENGTH * CELL_SIZE + BORDER_WIDTH * 2
 WINDOW_HEIGHT = NUM_ROWS * CELL_SIZE + BORDER_WIDTH * 2
 
@@ -30,9 +30,11 @@ screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 pygame.display.set_caption("Jeu de Dames - Dame avec Mouvement Libre")
 
 # Initialisation des pions
-pions_rouges = [[row, col, False] for row in range(4) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]  # False = pas reine
+pions_rouges = [[row, col, False] for row in range(4) for col in range(LINE_LENGTH) if
+                (row + col) % 2 == 0]  # False = pas reine
 pions_bleus = [[row, col, False] for row in range(6, 10) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]
 selected_pion = None  # Aucun pion n'est sélectionné au départ
+
 
 # ------------ FONCTIONS ------------
 
@@ -49,6 +51,7 @@ def afficher_lignes():
                 CELL_SIZE, CELL_SIZE
             ))
 
+
 def dessiner_pion(position, color, is_queen=False):
     """
     Dessine un pion de la couleur spécifiée à la position donnée.
@@ -60,6 +63,7 @@ def dessiner_pion(position, color, is_queen=False):
     if is_queen:
         pygame.draw.circle(screen, QUEEN_COLOR, (x, y), radius // 2)
 
+
 def detecter_case(mouse_pos):
     """
     Détecte sur quelle case l'utilisateur a cliqué.
@@ -70,6 +74,7 @@ def detecter_case(mouse_pos):
     if 0 <= row < NUM_ROWS and 0 <= col < LINE_LENGTH:
         return [row, col]
     return None
+
 
 def detecter_clic_pion(mouse_pos, pions):
     """
@@ -83,6 +88,7 @@ def detecter_clic_pion(mouse_pos, pions):
             return i  # Retourne l'indice du pion sélectionné
     return None
 
+
 def est_case_noire(case):
     """
     Vérifie si une case est noire.
@@ -90,12 +96,14 @@ def est_case_noire(case):
     row, col = case
     return (row + col) % 2 == 0
 
+
 def verifier_case_libre(case):
     """
     Vérifie si une case est libre (aucun pion rouge ou bleu).
     """
     row, col = case
     return not any(p[0] == row and p[1] == col for p in (pions_rouges + pions_bleus))
+
 
 def mouvement_dame_valide(pion, case_cible):
     """
@@ -121,6 +129,7 @@ def mouvement_dame_valide(pion, case_cible):
 
     return True
 
+
 def promotion_en_reine(pion, couleur):
     """
     Vérifie si le pion doit être promu en reine.
@@ -129,6 +138,7 @@ def promotion_en_reine(pion, couleur):
         pion[2] = True  # Promu en reine
     elif couleur == BLUE and pion[0] == 0:
         pion[2] = True  # Promu en reine
+
 
 # ------------ BOUCLE PRINCIPALE ------------
 
