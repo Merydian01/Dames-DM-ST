@@ -86,6 +86,12 @@ def est_case_noire(case):
     row, col = case
     return (row + col) % 2 == 0
 
+def est_case_vide(case, pions_rouges, pions_bleus):
+    """
+    Vérifie si une case est vide (aucun pion rouge ou bleu).
+    """
+    return not any(p[0] == case[0] and p[1] == case[1] for p in (pions_rouges + pions_bleus))
+
 def verifier_capture(pion, case_cible, pions_ennemis):
     """
     Vérifie si une capture est possible :
@@ -102,7 +108,7 @@ def verifier_capture(pion, case_cible, pions_ennemis):
 
         # Vérifie si un pion ennemi est à capturer et la case cible est vide
         if any(p[0] == middle_row and p[1] == middle_col for p in pions_ennemis) and \
-                not any(p[0] == target_row and p[1] == target_col for p in (pions_rouges + pions_bleus)):
+                est_case_vide(case_cible, pions_rouges, pions_bleus):
             return True
 
     return False
@@ -141,7 +147,6 @@ def promotion_en_reine(pion, couleur):
 
 running = True
 case_cible = None  # Case cible pour déplacer le pion
-
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -160,7 +165,7 @@ while running:
                 else:
                     # Si un pion est déjà sélectionné, détecte la case cible
                     case_cible = detecter_case(event.pos)
-                    if case_cible and est_case_noire(case_cible):
+                    if case_cible and est_case_noire(case_cible) and est_case_vide(case_cible, pions_rouges, pions_bleus):
                         pions, index = selected_pion
                         pion = pions[index]
 
