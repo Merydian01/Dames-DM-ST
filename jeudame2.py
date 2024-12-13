@@ -2,40 +2,33 @@ import pygame
 
 # ------------ INITIALISATION ET PARAMÈTRES ------------
 
-# Initialisation de Pygame
 pygame.init()
 
-# Définition des couleurs
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 BG_COLOR = (200, 200, 200)
-QUEEN_COLOR = (255, 215, 0)  # Or pour les reines
+QUEEN_COLOR = (255, 215, 0)
 
-# Paramètres du plateau et de la fenêtre
-CELL_SIZE = 80          # Taille d'une case
-LINE_LENGTH = 10        # Nombre de cases par ligne
-NUM_ROWS = 10           # Nombre de lignes
-BORDER_WIDTH = 20       # Largeur de la bordure autour du plateau
+CELL_SIZE = 80
+LINE_LENGTH = 10
+NUM_ROWS = 10
+BORDER_WIDTH = 20
 WINDOW_WIDTH = LINE_LENGTH * CELL_SIZE + BORDER_WIDTH * 2
 WINDOW_HEIGHT = NUM_ROWS * CELL_SIZE + BORDER_WIDTH * 2
 
-# Création de la fenêtre d'affichage
 screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("Jeu de Dames - Captures Valides")
+pygame.display.set_caption("Jeu de Dames - Coups Multiples")
 
-# Initialisation des pions
-pions_rouges = [[row, col, False] for row in range(4) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]  # False = pas reine
+pions_rouges = [[row, col, False] for row in range(4) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]
 pions_bleus = [[row, col, False] for row in range(6, 10) for col in range(LINE_LENGTH) if (row + col) % 2 == 0]
-selected_pion = None  # Aucun pion n'est sélectionné au départ
+selected_pion = None
+tour_rouge = True  # Rouge commence
 
 # ------------ FONCTIONS ------------
 
 def afficher_lignes():
-    """
-    Affiche un plateau de damier noir et blanc.
-    """
     for row in range(NUM_ROWS):
         for col in range(LINE_LENGTH):
             color = BLACK if (row + col) % 2 == 0 else WHITE
@@ -46,9 +39,6 @@ def afficher_lignes():
             ))
 
 def dessiner_pion(position, color, is_queen=False):
-    """
-    Dessine un pion de la couleur spécifiée à la position donnée.
-    """
     x = position[1] * CELL_SIZE + CELL_SIZE // 2 + BORDER_WIDTH
     y = position[0] * CELL_SIZE + CELL_SIZE // 2 + BORDER_WIDTH
     radius = CELL_SIZE // 3
@@ -57,143 +47,183 @@ def dessiner_pion(position, color, is_queen=False):
         pygame.draw.circle(screen, QUEEN_COLOR, (x, y), radius // 2)
 
 def detecter_case(mouse_pos):
-    """
-    Détecte sur quelle case l'utilisateur a cliqué.
-    """
-    x, y = mouse_pos
-    col = (x - BORDER_WIDTH) // CELL_SIZE
-    row = (y - BORDER_WIDTH) // CELL_SIZE
+    x = mouse_pos[0] - BORDER_WIDTH
+    y = mouse_pos[1] - BORDER_WIDTH
+    col = x // CELL_SIZE
+    row = y // CELL_SIZE
     if 0 <= row < NUM_ROWS and 0 <= col < LINE_LENGTH:
         return [row, col]
     return None
 
 def detecter_clic_pion(mouse_pos, pions):
-    """
-    Vérifie si la souris clique sur un pion donné.
-    """
     for i, pion in enumerate(pions):
         x = pion[1] * CELL_SIZE + CELL_SIZE // 2 + BORDER_WIDTH
         y = pion[0] * CELL_SIZE + CELL_SIZE // 2 + BORDER_WIDTH
         distance = ((mouse_pos[0] - x) ** 2 + (mouse_pos[1] - y) ** 2) ** 0.5
         if distance <= CELL_SIZE // 3:
-            return i  # Retourne l'indice du pion sélectionné
+            return i
     return None
 
 def est_case_noire(case):
-    """
-    Vérifie si une case est noire.
-    """
     row, col = case
     return (row + col) % 2 == 0
 
 def est_case_vide(case, pions_rouges, pions_bleus):
-    """
-    Vérifie si une case est vide (aucun pion rouge ou bleu).
-    """
     return not any(p[0] == case[0] and p[1] == case[1] for p in (pions_rouges + pions_bleus))
 
-def verifier_capture(pion, case_cible, pions_ennemis):
-    """
-    Vérifie si une capture est possible :
-    - Pion saute par-dessus un ennemi.
-    - Une case vide se trouve après l'ennemi.
-    """
-    row, col, _ = pion
+def deplacement_valide(pion, case_cible, couleur):
+    """Vérifie si le déplacement est valide."""
+    row, col, is_queen = pion
     target_row, target_col = case_cible
-
-    # Vérifie si la case cible est à deux cases en diagonale
-    if abs(target_row - row) == 2 and abs(target_col - col) == 2:
-        middle_row = (row + target_row) // 2
-        middle_col = (col + target_col) // 2
-
-        # Vérifie si un pion ennemi est à capturer et la case cible est vide
-        if any(p[0] == middle_row and p[1] == middle_col for p in pions_ennemis) and \
-                est_case_vide(case_cible, pions_rouges, pions_bleus):
-            return True
+    if is_queen:
+        # Vérifie le déplacement en diagonale
+        delta_row = target_row - row
+        delta_col = target_col - col
+        if abs(delta_row) == abs(delta_col):
+            step_row = delta_row // abs(delta_row)
+            step_col = delta_col // abs(delta_col)
+            ennemis_trouves = 0
+            for i in range(1, abs(delta_row)):
+                intermediate_row = row + i * step_row
+                intermediate_col = col + i * step_col
+                if any(p[0] == intermediate_row and p[1] == intermediate_col for p in pions_rouges + pions_bleus):
+                    if any(p[0] == intermediate_row and p[1] == intermediate_col for p in (pions_bleus if couleur == RED else pions_rouges)):
+                        ennemis_trouves += 1
+                    else:
+                        return False  # Bloqué par un pion allié
+            return ennemis_trouves <= 1 and est_case_vide(case_cible, pions_rouges, pions_bleus)
+    else:
+        # Déplacement standard pour un pion
+        if couleur == RED and target_row < row:
+            return False
+        if couleur == BLUE and target_row > row:
+            return False
+        return abs(target_row - row) == 1 and abs(target_col - col) == 1 and \
+               est_case_vide(case_cible, pions_rouges, pions_bleus)
 
     return False
 
-def effectuer_capture(pion, case_cible, pions_ennemis):
-    """
-    Effectue la capture :
-    - Déplace le pion sur la case cible.
-    - Supprime le pion ennemi capturé.
-    """
-    row, col, _ = pion
+def verifier_capture(pion, case_cible, pions_ennemis):
+    """Vérifie si une capture est possible."""
+    row, col, is_queen = pion
     target_row, target_col = case_cible
-    middle_row = (row + target_row) // 2
-    middle_col = (col + target_col) // 2
 
-    # Supprime le pion ennemi capturé
-    for p in pions_ennemis:
-        if p[0] == middle_row and p[1] == middle_col:
-            pions_ennemis.remove(p)
-            break
+    if is_queen:
+        delta_row = target_row - row
+        delta_col = target_col - col
+        if abs(delta_row) == abs(delta_col):
+            step_row = delta_row // abs(delta_row)
+            step_col = delta_col // abs(delta_col)
+            ennemis_trouves = []
+            for i in range(1, abs(delta_row)):
+                intermediate_row = row + i * step_row
+                intermediate_col = col + i * step_col
+                if any(p[0] == intermediate_row and p[1] == intermediate_col for p in pions_ennemis):
+                    ennemis_trouves.append((intermediate_row, intermediate_col))
+                elif not est_case_vide([intermediate_row, intermediate_col], pions_rouges, pions_bleus):
+                    return False
+            return len(ennemis_trouves) == 1 and est_case_vide(case_cible, pions_rouges, pions_bleus)
+    else:
+        if abs(target_row - row) == 2 and abs(target_col - col) == 2:
+            middle_row = (row + target_row) // 2
+            middle_col = (col + target_col) // 2
+            if any(p[0] == middle_row and p[1] == middle_col for p in pions_ennemis) and \
+                    est_case_vide(case_cible, pions_rouges, pions_bleus):
+                return True
 
-    # Met à jour la position du pion
-    pion[0] = target_row
-    pion[1] = target_col
+    return False
+def effectuer_capture(pion, case_cible, pions_ennemis):
+    """Effectue la capture d'un pion ennemi."""
+    row, col, is_queen = pion
+    target_row, target_col = case_cible
+
+    if is_queen:
+        delta_row = target_row - row
+        delta_col = target_col - col
+        step_row = delta_row // abs(delta_row)
+        step_col = delta_col // abs(delta_col)
+        for i in range(1, abs(delta_row)):
+            intermediate_row = row + i * step_row
+            intermediate_col = col + i * step_col
+            for p in pions_ennemis:
+                if p[0] == intermediate_row and p[1] == intermediate_col:
+                    pions_ennemis.remove(p)
+                    break
+    else:
+        middle_row = (row + target_row) // 2
+        middle_col = (col + target_col) // 2
+        for p in pions_ennemis:
+            if p[0] == middle_row and p[1] == middle_col:
+                pions_ennemis.remove(p)
+                break
+
+    pion[0], pion[1] = target_row, target_col
+
+def mouvements_possibles_apres_capture(pion, pions_ennemis):
+    """Retourne les mouvements possibles après une capture."""
+    row, col, is_queen = pion
+    mouvements = []
+
+    for delta_row, delta_col in [(-2, -2), (-2, 2), (2, -2), (2, 2)]:
+        target_row = row + delta_row
+        target_col = col + delta_col
+        if 0 <= target_row < NUM_ROWS and 0 <= target_col < LINE_LENGTH:
+            if verifier_capture(pion, [target_row, target_col], pions_ennemis):
+                mouvements.append([target_row, target_col])
+
+    return mouvements
 
 def promotion_en_reine(pion, couleur):
-    """
-    Vérifie si le pion doit être promu en reine.
-    """
+    """Promut un pion en reine s'il atteint l'extrémité du plateau."""
     if couleur == RED and pion[0] == NUM_ROWS - 1:
-        pion[2] = True  # Promu en reine
+        pion[2] = True
     elif couleur == BLUE and pion[0] == 0:
-        pion[2] = True  # Promu en reine
+        pion[2] = True
 
 # ------------ BOUCLE PRINCIPALE ------------
 
 running = True
-case_cible = None  # Case cible pour déplacer le pion
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:  # Clic gauche
+            if event.button == 1:
                 if selected_pion is None:
-                    # Vérifie si un pion rouge ou bleu est sélectionné
-                    index = detecter_clic_pion(event.pos, pions_rouges)
-                    if index is not None:
-                        selected_pion = (pions_rouges, index)  # Sélectionner un pion rouge
+                    if tour_rouge:
+                        index = detecter_clic_pion(event.pos, pions_rouges)
+                        if index is not None:
+                            selected_pion = (pions_rouges, index)
                     else:
                         index = detecter_clic_pion(event.pos, pions_bleus)
                         if index is not None:
-                            selected_pion = (pions_bleus, index)  # Sélectionner un pion bleu
+                            selected_pion = (pions_bleus, index)
                 else:
-                    # Si un pion est déjà sélectionné, détecte la case cible
                     case_cible = detecter_case(event.pos)
-                    if case_cible and est_case_noire(case_cible) and est_case_vide(case_cible, pions_rouges, pions_bleus):
+                    if case_cible and est_case_noire(case_cible):
                         pions, index = selected_pion
                         pion = pions[index]
+                        couleur = RED if pions == pions_rouges else BLUE
 
-                        # Vérifie capture ou mouvement
                         if verifier_capture(pion, case_cible, pions_bleus if pions == pions_rouges else pions_rouges):
                             effectuer_capture(pion, case_cible, pions_bleus if pions == pions_rouges else pions_rouges)
-                        elif abs(case_cible[0] - pion[0]) == 1 and abs(case_cible[1] - pion[1]) == 1:
-                            # Mouvement normal
+                            new_moves = mouvements_possibles_apres_capture(pion, pions_bleus if pions == pions_rouges else pions_rouges)
+                            if not new_moves:
+                                tour_rouge = not tour_rouge
+                        elif deplacement_valide(pion, case_cible, couleur) and \
+                                est_case_vide(case_cible, pions_rouges, pions_bleus):
                             pion[0], pion[1] = case_cible[0], case_cible[1]
-
-                        # Vérifie promotion
-                        promotion_en_reine(pion, RED if pions == pions_rouges else BLUE)
-
+                            tour_rouge = not tour_rouge
+                        promotion_en_reine(pion, couleur)
                         selected_pion = None
-                        case_cible = None
 
-    # Remplir le fond de la fenêtre
     screen.fill(BG_COLOR)
-
-    # Affichage des cases et des pions
     afficher_lignes()
     for pion in pions_rouges:
         dessiner_pion(pion, RED, pion[2])
     for pion in pions_bleus:
         dessiner_pion(pion, BLUE, pion[2])
-
-    # Mise à jour de l'affichage
     pygame.display.flip()
 
 pygame.quit()
-
