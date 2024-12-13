@@ -7,7 +7,7 @@
 import pygame
 import backend
 
-
+"Coucou"
 pygame.init()
 
 BLACK = (0, 0, 0)
